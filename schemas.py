@@ -8,16 +8,11 @@ class LoginRequest(BaseModel):
     username: str
     password_hash: str
 
-class LoginCreate(BaseModel):
+class UserCreate(BaseModel):
     username: str
+    email: str
     password_hash: str
-    role_id: int
 
-class LoginEdit(BaseModel):
-    username: Optional[str] = None 
-    password_hash: Optional[str] = None
-    role_id: Optional[int] = None
-    is_active: Optional[bool] = True
 
 
 

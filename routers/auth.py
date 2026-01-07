@@ -6,7 +6,7 @@ from typing import Annotated
 
 from security import hash_password, verify_password
 from models import Users
-from schemas import LoginRequest, LoginCreate, LoginEdit
+from schemas import LoginRequest, UserCreate
 from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from dotenv import dotenv_values
@@ -124,3 +124,23 @@ async def update_last_login(username: str, db: db_dependency):
     db.refresh(user)
 
     return {"message" : "Successful", "user" : user}
+
+@router.post("/register", status_code=status.HTTP_200_OK)
+async def register_user(credentials: UserCreate, db: db_dependency):
+    user_exists = db.query(Users).filter(Users.username == credentials.username).first()
+    if user_exists: 
+        raise HTTPException(status_code=400, detail="This username exists")
+
+    email_exists = db.query(Users).filter(Users.email == credentials.email).first()
+    if email_exists: 
+        raise HTTPException(status_code=400, detail="This email exists")
+    
+    user_data = credentials.dict()
+    user_data["password_hash"] = hash_password(user_data["password_hash"])
+    
+    new_user = Users(**user_data)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return {"message" : "Successful", "user" : new_user}
+
