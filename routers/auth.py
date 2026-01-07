@@ -68,6 +68,7 @@ async def login_for_access_token(db: db_dependency, form_data: OAuth2PasswordReq
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
+
 @router.get("/verify-token")
 async def verify_token(token: str, db: db_dependency):
     try:

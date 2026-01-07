@@ -20,9 +20,5 @@ class LoginEdit(BaseModel):
     is_active: Optional[bool] = True
 
 
-class RoleBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-
 
 
