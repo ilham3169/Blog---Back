@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import Annotated
@@ -9,7 +9,7 @@ from datetime import datetime
 from jose import JWTError
 from dotenv import dotenv_values
 from database import db_dependency
-
+from email_service import send_welcome_email
 from security import hash_password, get_current_user, authenticate_user, create_access_token, create_refresh_token, decode_token, _now_ts, verify_password
 
 
@@ -158,7 +158,7 @@ async def update_last_login(username: str, db: db_dependency):
     return {"message" : "Successful", "user" : user}
 
 @router.post("/register", status_code=status.HTTP_200_OK)
-async def register_user(credentials: UserCreate, db: db_dependency):
+async def register_user(credentials: UserCreate, db: db_dependency, background_tasks: BackgroundTasks):
     user_exists = db.query(Users).filter(Users.username == credentials.username).first()
     if user_exists: 
         raise HTTPException(status_code=400, detail="This username exists")
@@ -174,5 +174,7 @@ async def register_user(credentials: UserCreate, db: db_dependency):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    background_tasks.add_task(send_welcome_email, new_user.email, new_user.username)
     return {"message" : "Successful", "user" : new_user}
 

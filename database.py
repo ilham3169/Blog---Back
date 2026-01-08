@@ -3,8 +3,10 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.orm import Session
+from dotenv import dotenv_values
 
-DATABASE_URL = "mysql+pymysql://root:girmeyolmaz666@localhost/blog"
+env = dotenv_values(".env")
+DATABASE_URL = env["DB_CONNECTION"]
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
