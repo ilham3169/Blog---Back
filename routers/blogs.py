@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, status, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from typing import Annotated
 
-from security import hash_password, verify_password
-from datetime import datetime, timedelta, timezone
+from security import get_current_user
 from jose import JWTError, jwt
 from dotenv import dotenv_values
 from database import SessionLocal
 
 from models import Blogs, Users
 from schemas import BlogCreate
+
 
 import pytz
 
@@ -77,12 +77,11 @@ async def get_all_blogs(db: db_dependency, token: str = Depends(oauth2_scheme)):
 @router.post("/create", status_code=status.HTTP_201_CREATED)
 async def create_blog_post(create_data: BlogCreate, db: db_dependency, token: str = Depends(oauth2_scheme)):
     current_user = get_current_user(db, token)
-
     title = create_data.title.strip()
 
     exist_blog = db.query(Blogs).filter(Blogs.title == title).first()
 
-    if exist_blog:
+    if exist_blog and exist_blog.author_id == current_user.id:
         raise HTTPException(status_code=400, detail="This blog title exists")
 
     new_blog = Blogs(title=title, description=create_data.description.strip(),author_id=current_user.id)

@@ -1,10 +1,7 @@
-from optparse import Option
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr
 from typing import Optional
-from datetime import datetime
 
 
-# <-- User --> #
 class LoginRequest(BaseModel):
     username: str
     # password_hash: str = Field(min_length=6, max_length=72)
@@ -16,7 +13,15 @@ class UserCreate(BaseModel):
     password_hash: str
 
 
-# <-- Blog --> #
+class UserUpdateRequest(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
+
+
+
 class BlogCreate(BaseModel):
     title: str
     description: str
