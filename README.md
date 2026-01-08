@@ -61,5 +61,3 @@ The application supports user authentication, blog creation, secure access contr
 
 ---
 
-## 📂 Project Structure
-
