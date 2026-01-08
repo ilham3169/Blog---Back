@@ -109,3 +109,20 @@ def update_blog(blog_id: int, payload: BlogUpdateRequest,db: db_dependency, curr
             "edit_date": blog.edit_date,
         },
     }
+
+@router.delete("/{blog_id}", status_code=status.HTTP_200_OK)
+def delete_blog(blog_id: int, db: db_dependency, current_user: Users = Depends(get_current_user)):
+    blog = db.query(Blogs).filter(Blogs.id == blog_id).first()
+    if not blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+
+    if blog.author_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to delete this blog",
+        )
+
+    db.delete(blog)
+    db.commit()
+
+    return {"message": "Blog deleted successfully", "deleted_id": blog_id}

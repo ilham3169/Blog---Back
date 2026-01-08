@@ -22,8 +22,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_DAYS = 30  
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
-
-
 def hash_password(password: str) -> str:
     pwd_bytes = password.encode('utf-8')
     salt = bcrypt.gensalt()
