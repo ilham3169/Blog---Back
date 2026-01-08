@@ -12,7 +12,6 @@ class UserCreate(BaseModel):
     email: str
     password_hash: str
 
-
 class UserUpdateRequest(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -21,11 +20,13 @@ class UserUpdateRequest(BaseModel):
     new_password: Optional[str] = None
 
 
-
 class BlogCreate(BaseModel):
     title: str
     description: str
 
+class BlogUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
 
 
 

@@ -1,64 +1,14 @@
 from fastapi import APIRouter, Depends, status, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
-from sqlalchemy.orm import Session
-from typing import Annotated
-
-from security import get_current_user
-from jose import JWTError, jwt
-from dotenv import dotenv_values
-from database import SessionLocal
-
 from models import Blogs, Users
-from schemas import BlogCreate
+from schemas import BlogCreate, BlogUpdateRequest
+from database import db_dependency
+from security import get_current_user
 
+router = APIRouter(prefix="/blogs", tags=["blogs"])
 
-import pytz
-
-router = APIRouter(
-    prefix="/blogs",
-    tags=["blogs"]
-)
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-env = dotenv_values(".env")
-SECRET_KEY = env["SECRET_KEY"]
-ALGORITHM = env["ALGORITHM"]
-
-
-TIMEZONE = pytz.timezone("Asia/Baku")
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
-
-db_dependency = Annotated[Session, Depends(get_db)]
-
-def get_current_user(db: Session, token: str) -> Users:
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str | None = payload.get("sub")
-        if not username:
-            raise HTTPException(status_code=401, detail="Invalid token")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    user = db.query(Users).filter(Users.username == username).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="Inactive user")
-
-    return user
 
 @router.get("/all_blogs", status_code=status.HTTP_200_OK)
-async def get_all_blogs(db: db_dependency, token: str = Depends(oauth2_scheme)):
-    current_user = get_current_user(db, token)
-
+def get_all_blogs(db: db_dependency, current_user: Users = Depends(get_current_user)):
     blogs = db.query(Blogs).filter(Blogs.author_id == current_user.id).order_by(Blogs.created_date.desc()).all()
 
     return [
@@ -75,16 +25,25 @@ async def get_all_blogs(db: db_dependency, token: str = Depends(oauth2_scheme)):
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
-async def create_blog_post(create_data: BlogCreate, db: db_dependency, token: str = Depends(oauth2_scheme)):
-    current_user = get_current_user(db, token)
-    title = create_data.title.strip()
+def create_blog_post(create_data: BlogCreate, db: db_dependency,current_user: Users = Depends(get_current_user)):
+    title = (create_data.title or "").strip()
+    description = (create_data.description or "").strip()
 
-    exist_blog = db.query(Blogs).filter(Blogs.title == title).first()
+    if not title:
+        raise HTTPException(status_code=400, detail="Title cannot be empty")
+    if not description:
+        raise HTTPException(status_code=400, detail="Description cannot be empty")
 
-    if exist_blog and exist_blog.author_id == current_user.id:
+    exist_blog = db.query(Blogs).filter(Blogs.author_id == current_user.id, Blogs.title == title).first()
+
+    if exist_blog:
         raise HTTPException(status_code=400, detail="This blog title exists")
 
-    new_blog = Blogs(title=title, description=create_data.description.strip(),author_id=current_user.id)
+    new_blog = Blogs(
+        title=title,
+        description=description,
+        author_id=current_user.id,
+    )
 
     db.add(new_blog)
     db.commit()
@@ -99,5 +58,54 @@ async def create_blog_post(create_data: BlogCreate, db: db_dependency, token: st
             "author_id": new_blog.author_id,
             "created_date": new_blog.created_date,
             "edit_date": new_blog.edit_date,
-        }
+        },
+    }
+
+
+@router.patch("/edit/{blog_id}", status_code=status.HTTP_200_OK)
+def update_blog(blog_id: int, payload: BlogUpdateRequest,db: db_dependency, current_user: Users = Depends(get_current_user)):
+
+    blog = db.query(Blogs).filter(Blogs.id == blog_id).first()
+    if not blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+
+    if blog.author_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to edit this blog",
+        )
+
+    if payload.title is None and payload.description is None:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    if payload.title is not None:
+        new_title = payload.title.strip()
+        if not new_title:
+            raise HTTPException(status_code=400, detail="Title cannot be empty")
+
+        exists = db.query(Blogs).filter(Blogs.author_id == current_user.id, Blogs.title == new_title, Blogs.id != blog_id).first()
+        if exists:
+            raise HTTPException(status_code=400, detail="This blog title exists")
+
+        blog.title = new_title
+
+    if payload.description is not None:
+        new_desc = payload.description.strip()
+        if not new_desc:
+            raise HTTPException(status_code=400, detail="Description cannot be empty")
+        blog.description = new_desc
+
+    db.commit()
+    db.refresh(blog)
+
+    return {
+        "message": "Blog updated successfully",
+        "blog": {
+            "id": blog.id,
+            "title": blog.title,
+            "description": blog.description,
+            "author_id": blog.author_id,
+            "created_date": blog.created_date,
+            "edit_date": blog.edit_date,
+        },
     }
