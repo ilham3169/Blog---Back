@@ -3,7 +3,6 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from typing import Annotated
-
 from security import hash_password, verify_password
 from models import Users
 from schemas import LoginRequest, UserCreate
@@ -31,7 +30,13 @@ env = dotenv_values(".env")
 SECRET_KEY = env["SECRET_KEY"]
 ALGORITHM = env["ALGORITHM"]
 
+if not SECRET_KEY: raise RuntimeError("SECRET_KEY is missing in .env")
+if not ALGORITHM: raise RuntimeError("ALGORITHM is missing in .env")
+
+
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
+REFRESH_TOKEN_EXPIRE_DAYS = 30  
+
 TIMEZONE = pytz.timezone("Asia/Baku")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
@@ -89,7 +94,6 @@ async def verify_token(token: str, db: db_dependency):
             "user": {
                 "id": user.id,
                 "username": user.username,
-                "fullname": user.fullname,
             },
             "time": seconds_left
         }
