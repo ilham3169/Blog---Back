@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, status, HTTPException, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from sqlalchemy.orm import Session
 from typing import Annotated
 from jose.exceptions import ExpiredSignatureError
 from models import Users
@@ -9,7 +8,7 @@ from datetime import datetime
 from jose import JWTError
 from dotenv import dotenv_values
 from database import db_dependency
-from email_service import send_welcome_email
+from email_service import send_welcome_email, send_login_message
 from security import hash_password, get_current_user, authenticate_user, create_access_token, create_refresh_token, decode_token, _now_ts, verify_password
 
 
@@ -73,7 +72,7 @@ def update_me(payload: UserUpdateRequest, db: db_dependency ,current_user: Users
     }
 
 @router.post("/token")
-async def login_for_access_token(db: db_dependency, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+async def login_for_access_token(db: db_dependency, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], background_tasks: BackgroundTasks):
     user = authenticate_user(db, form_data.username, form_data.password)
 
     if not user:
@@ -84,6 +83,8 @@ async def login_for_access_token(db: db_dependency, form_data: Annotated[OAuth2P
 
     access_token = create_access_token(user.username)
     refresh_token = create_refresh_token(user.username)
+
+    background_tasks.add_task(send_login_message, user.email, user.username)
 
     return {
         "access_token": access_token,
@@ -141,6 +142,7 @@ async def login_json(db: db_dependency, body: LoginRequest):
 
     access_token = create_access_token(user.username)
     refresh_token = create_refresh_token(user.username)
+
 
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
