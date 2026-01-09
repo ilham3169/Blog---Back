@@ -19,6 +19,7 @@ The application supports user authentication, blog creation, secure access contr
 - Edit blogs (only by the author)
 - Delete blogs (only by the author)
 - View all blogs created by the logged-in user
+- Admin users can view and manage all blogs
 
 ###  Email System
 - Welcome email sent after user registration
@@ -34,8 +35,6 @@ The application supports user authentication, blog creation, secure access contr
 ## Planned Features
 
 - Privilege system:
-  - Admin users can view and manage all blogs
-- Role-based access control (RBAC)
 - Public blog feed
 - Pagination and search
 - HTML email templates
