@@ -34,6 +34,7 @@ async def me(current_user: Annotated[Users, Depends(get_current_user)]):
         "id": current_user.id,
         "username": current_user.username,
         "is_active": getattr(current_user, "is_active", True),
+        "role": current_user.role
     }
 
 @router.patch("/update_me", status_code=status.HTTP_200_OK)
@@ -91,7 +92,7 @@ async def login_for_access_token(db: db_dependency, form_data: Annotated[OAuth2P
         "refresh_token": refresh_token, 
         "token_type": "bearer",
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        "user": {"id": user.id, "username": user.username},
+        "user": {"id": user.id, "username": user.username, "role": user.role}
     }
 
 @router.post("/refresh")
@@ -129,7 +130,7 @@ async def verify_token(token: Annotated[str, Depends(oauth2_scheme)],db: db_depe
 
     return {
         "status": "valid",
-        "user": {"id": user.id, "username": user.username},
+        "user": {"id": user.id, "username": user.username, "role": user.role},
         "time_left_seconds": max(seconds_left, 0),
     }
 
@@ -171,6 +172,8 @@ async def register_user(credentials: UserCreate, db: db_dependency, background_t
     
     user_data = credentials.dict()
     user_data["password_hash"] = hash_password(user_data["password_hash"])
+
+    user_data["role"] = "user"
     
     new_user = Users(**user_data)
     db.add(new_user)

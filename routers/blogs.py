@@ -9,7 +9,11 @@ router = APIRouter(prefix="/blogs", tags=["blogs"])
 
 @router.get("/all_blogs", status_code=status.HTTP_200_OK)
 def get_all_blogs(db: db_dependency, current_user: Users = Depends(get_current_user)):
-    blogs = db.query(Blogs).filter(Blogs.author_id == current_user.id).order_by(Blogs.created_date.desc()).all()
+    
+    if current_user.role == "admin":
+        blogs = db.query(Blogs).order_by(Blogs.created_date.desc()).all()
+    else:
+        blogs = db.query(Blogs).filter(Blogs.author_id == current_user.id).order_by(Blogs.created_date.desc()).all()
 
     return [
         {
@@ -19,6 +23,8 @@ def get_all_blogs(db: db_dependency, current_user: Users = Depends(get_current_u
             "created_date": b.created_date,
             "edit_date": b.edit_date,
             "author_id": b.author_id,
+            "author_name": b.author.username
+
         }
         for b in blogs
     ]
